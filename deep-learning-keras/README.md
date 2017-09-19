@@ -6,7 +6,7 @@
 
 ## 3 - Creating a Neural Network in Keras
 
-### The train-test-evaluation flow
+### **The train-test-evaluation flow**
 
 The computer learns how to perform a function by looking at labeled training data. We use the model train-test-evaluation flow to achieve that.
 
@@ -57,7 +57,7 @@ model = keras.models.load_model('trained_model.h5')
 predictions = model.predict(new_data)
 ```
 
-### Keras Sequential API
+### **Keras Sequential API**
 
 A neural network (NN) is a machine-learning algorithm mad eup of individual nodes called neurons. These nodes, or neurons, are arranged into a serious of groups called layers. Nodes in each layer are connected to nodes in the following layer. Data flows from the input to the output along these connections. Each individual node is trained to perform a simple mathematical calculation and then feed its data to all the nodes it's connected to.
 
@@ -118,7 +118,7 @@ The final step of defining a model is to compile it by calling `model.compile`. 
 
 The optimizer algorithm is the algorithm used to train your neural network. The loss function is how the training process measures how 'right' or 'wrong' the NN's predictions are.
 
-### Pre-processing training data
+### **Pre-processing training data**
 Navigate to the `03` directory. We'll use `sales_data_training.csv` to train a NN that will predict how much money we can expect future video games to earn based on historical data. In the dataset, we have one row for eac video game title that the store has sold in the past. For each game, we have recorded several attributes:
 
 ![Training Data](img/training_data.png)
@@ -164,5 +164,45 @@ scaled_testing_df.to_csv("sales_data_test_scaled.csv", index=False)
 
 Once this runs, it will print to the console how much the data was scaled by and will also save our pre-processed CSV files in the same folder.
 
-### Define a Keras model using the Sequential API
+### **Define a Keras model using the Sequential API**
 
+Open up `createmodel.py`. First, we've used the pandas library to load the pre-scaled data from a CSV file. Each row of our data set contains several features that describe each video game and then the total earnings value for that game. We want to split that data into two separate arrays. One with just the input features for each game and one with just the expected earnings.
+
+```python
+import pandas as pd
+from keras.models import Sequential
+from keras.layers import *
+
+training_data_df = pd.read_csv("sales_data_training_scaled.csv")
+
+# Drop the total earnings column
+# X now contains all the input features for each game
+X = training_data_df.drop('total_earnings', axis=1).values
+
+# Grab just the total earnings column
+# Y now contains only the expected earnings for each game
+Y = training_data_df[['total_earnings']].values
+
+# Define the model
+model = Sequential()
+
+# 9 characteristics for each dataset, so 9 input dimensions!
+# Rectified Linear Unit Activation will let us model more complex and non-linear functions
+model.add(Dense(50, input_dim=9, activation='relu'))
+model.add(Dense(100, activation='relu'))
+model.add(Dense(50, activation='relu'))
+
+# We need a singular value, so we'll use a linear activation function
+model.add(Dense(1, activation='linear'))
+model.compile(loss="mean_squared_error", optimizer="adam")
+```
+
+When building a NN like this, we usually don't know ahead of time how many layers and nodes we should use until we try it and see what gives us the best accuracy with our data set.
+
+We can experiment with adding or moving layers and changing the number of nodes in each layer. The final output of our Neural Network should be a single number that represents the amount of money we predict a single game will earn. So the last layer of our NN needs to have exactly one output node.
+
+When we compile, we have to specify the loss function. The loss function is how Keras measures how close the NN's predictions are to the expected values. For a NN that's predicting numbers like this one, [mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error) is the most common choice. That is the difference between the expected output, and the number that the NN predicted, squared.
+
+We also need an [optimization algorithm](https://medium.com/towards-data-science/types-of-optimization-algorithms-used-in-neural-networks-and-ways-to-optimize-gradient-95ae5d39529f). Optimization algorithms helps us to minimize (or maximize) a loss function (another name for Error function `E(x)` which is simply a mathematical function dependent on the model’s internal learnable parameters which are used in computing the target values(Y) from the set of predictors(X) used in the model. A good choice that works well for most prediction problems is the [Adam Optimizer](https://medium.com/@nishantnikhil/adam-optimizer-notes-ddac4fd7218).
+
+4 - Training Models
