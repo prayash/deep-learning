@@ -1,14 +1,28 @@
-## Introduction
-
 ## 1 - Keras Overview
 
+Keras is quickly becoming one of the most popular programming frameworks for deep learning, because it's quick and easy to use. With Keras, we can build state-of-the-art machine learning models with just a few lines of code.
+
+Neural networks and deep learning are behind many of the recent breakthroughs in areas like image recognition, language translation, and speech recognition. Keras is a framework for building deep neural networks with Python. With Keras, we can build state-of-the-art, deep learning systems. Keras is designed to make it as easy as possible to build deep learning systems with as little complexity as possible. With Keras, you can build a deep neural network with only with only a few lines of code.
+
+Keras doesn't do all of the work itself. It's really a front-end layer written in Python that runs on top of other popular deep learning toolkits like TensorFlow and Theano. At abstracts away a lot of the complexity of using those tools while still giving you many of the benefits. When you tell Keras to build a deep neural network, behind the scenes it builds out the neural network using either TensorFlow or Theano. In this course, we'll be using TensorFlow as the back-end. When you use Keras with TensorFlow, it builds a TensorFlow model and runs the training process for you.
+
+That means that your model is compatible with most tools and utilities that work with TensorFlow. You can even upload your Keras model to Google's Cloud Machine learning system. One of the core principles of Keras is that best practices are built in. When building a deep learning system, there are many different parameters you have to configure. Keras always tries to provide good defaults for parameters. The default setting used in Keras are based on what has worked well for researchers in the past.
+
+So more often than not, using the default settings in Keras will get you close to your goal. Even better, Keras comes with several pre-trained deep learning models for image recognition. You can use the pre-trained models to recognize common types of objects and images, or you can adapt these models to create a custom image recognition system with your own data.
+
 ## 2 - Setting Up
+
+Dependencies are:
+- [PyCharm (Community Edition)](www.jetbrains.com/pycharm/)
+- [Python 3.6](https://www.python.org/downloads/)
+
+Make sure the PyCharm Interpreter is set up to choose the right version pf Python (3.6) when opening the project. You may also need to install requirements that are listed in `requirements.txt` in each folder. These are really useful packages that help us get the job done.
 
 ## 3 - Creating a Neural Network in Keras
 
 ### **The train-test-evaluation flow**
 
-The computer learns how to perform a function by looking at labeled training data. We use the model train-test-evaluation flow to achieve that.
+We'll use Keras to build and train a supervised machine learning model. Supervised machine learning is the branch of machine learning where we train the model by showing it input data and the expected result for that data, and it works out how to transform the input into the expected output. When building a supervised machine learning model, there's a process we follow, called the model train test evaluation flow. First, we need to choose which machine learning algorithm we want to use. We can pick any standard machine learning algorithm, but with Keras, we'll always be using neural networks.
 
 We train the NN by showing it training data and the expected output for that data, and it has to figure out how to replicate the expected result. After training, we load up new data (test data) to make sure the model actually learned how to solve the problem. Once it's trained and tested, we use it in the real world. This is the evaluation phase.
 
@@ -18,7 +32,7 @@ Keras makes it easy to set up a train, test, evaluation flow. First, we create o
 model = keras.models.Sequential()
 ```
 
-Now, we can add layers to it by calling `model.add`:
+Now, we can add layers to it by calling `model.add`.
 
 ```python
 model.add(keras.layers.Dense())
@@ -205,4 +219,4 @@ When we compile, we have to specify the loss function. The loss function is how 
 
 We also need an [optimization algorithm](https://medium.com/towards-data-science/types-of-optimization-algorithms-used-in-neural-networks-and-ways-to-optimize-gradient-95ae5d39529f). Optimization algorithms helps us to minimize (or maximize) a loss function (another name for Error function `E(x)` which is simply a mathematical function dependent on the model’s internal learnable parameters which are used in computing the target values(Y) from the set of predictors(X) used in the model. A good choice that works well for most prediction problems is the [Adam Optimizer](https://medium.com/@nishantnikhil/adam-optimizer-notes-ddac4fd7218).
 
-4 - Training Models
+## 4 - Training Models
