@@ -133,7 +133,7 @@ The final step of defining a model is to compile it by calling `model.compile`. 
 The optimizer algorithm is the algorithm used to train your neural network. The loss function is how the training process measures how 'right' or 'wrong' the NN's predictions are.
 
 ### **Pre-processing training data**
-Navigate to the `03` directory. We'll use `sales_data_training.csv` to train a NN that will predict how much money we can expect future video games to earn based on historical data. In the dataset, we have one row for eac video game title that the store has sold in the past. For each game, we have recorded several attributes:
+Navigate to the `03` directory. We'll use `sales_data_training.csv` to train a NN that will predict how much money we can expect future video games to earn based on historical data. In the data set, we have one row for eac video game title that the store has sold in the past. For each game, we have recorded several attributes:
 
 ![Training Data](img/training_data.png)
 
@@ -141,7 +141,7 @@ We'll use Keras to train the NN that tries to **predict the total earnings of a 
 
 Notice how the values are between a range 0 all the way up to large numbers in the `total_earnings` column. To use this data to train a NN, we first have to scale the data so each value is between 0 and 1. NNs train best when data in each column is all scaled to the same range.
 
-Along with `sales_data_training.csv` file, we also have a `sales_data_test.csv` file. The ML system will only be exposed to the training dataset, then we'll use the test dataset to check how well our NN is performing.
+Along with `sales_data_training.csv` file, we also have a `sales_data_test.csv` file. The ML system will only be exposed to the training data set, then we'll use the test data set to check how well our NN is performing.
 
 Open up `preprocess_data.py`. Let's code:
 
@@ -200,7 +200,7 @@ Y = training_data_df[['total_earnings']].values
 # Define the model
 model = Sequential()
 
-# 9 characteristics for each dataset, so 9 input dimensions!
+# 9 characteristics for each data set, so 9 input dimensions!
 # Rectified Linear Unit Activation will let us model more complex and non-linear functions
 model.add(Dense(50, input_dim=9, activation='relu'))
 model.add(Dense(100, activation='relu'))
@@ -220,3 +220,134 @@ When we compile, we have to specify the loss function. The loss function is how 
 We also need an [optimization algorithm](https://medium.com/towards-data-science/types-of-optimization-algorithms-used-in-neural-networks-and-ways-to-optimize-gradient-95ae5d39529f). Optimization algorithms helps us to minimize (or maximize) a loss function (another name for Error function `E(x)` which is simply a mathematical function dependent on the model’s internal learnable parameters which are used in computing the target values(Y) from the set of predictors(X) used in the model. A good choice that works well for most prediction problems is the [Adam Optimizer](https://medium.com/@nishantnikhil/adam-optimizer-notes-ddac4fd7218).
 
 ## 4 - Training Models
+
+### **Training and evaluating the model**
+
+Open up `train_model.py`. To train the model, we need to call `model.fit` function. The most important parameters are the training features and the expected output. We also have to tell Keras how many training passes we want it to do over the training data during the training process. A single pass over the entire training data set is called an epoch. If we do too few, the NN won't make accurate predictions, but if we do too many, it also might overfit.
+
+We want to stop doing additional training passes when the network stops getting more accurate. We can also tell Keras to shuffle the order of the training data randomly. NNs train best when data is shuffled.
+
+```python
+# Train the model
+# Verbosity means more detailed information gets outputted
+model.fit(X, Y, epochs=50, shuffle=True, verbose=2)
+```
+
+That's all we need to train the network. After we train, we want to test it on data it's never seen before, to see if it performs as well on fresh data. This helps us verify that the NN didn't just memorize the answers for specific training data but it actually learned how to solve the problem. So now we load the pre-scaled testing data set, and we split out the training features and the expected output from the testing data.
+
+```python
+# Load the separate test data set
+test_data_df = pd.read_csv("sales_data_test_scaled.csv")
+
+X_test = test_data_df.drop('total_earnings', axis=1).values
+Y_test = test_data_df[['total_earnings']].values
+```
+
+To measure the error rate of the testing data, we'll call `model.evaluate`. Then we pass in testing data and the expected output for it. The result will be the error rate for the test data as measured by our cost function, and we'll store that in the test error rate.
+
+```python
+test_error_rate = model.evaluate(X_test, Y_test, verbose=0)
+print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
+```
+
+Now, we can execute this program and it will take 50 training passes, printing the error rate on each iteration. The number will get smaller and smaller on each pass (smaller the better).
+
+```
+Epoch 50/50
+0s - loss: 2.9731e-05
+The mean squared error (MSE) for the test data set is: 6.333094323053956e-05
+```
+
+It means the NN is making predictions that are on average very close to the expected values. We can also modify the parameters or the design of the NN to see how that affects the final accuracy. Is it possible to get the same accuracy with fewer layers in the NN or fewer nodes in each layer?
+
+**Making predictions**
+
+Once we've trained our model in Keras, we can put it to use. We'll use a training model to make predictions for new data. Our NN is already trained to look at characteristics of video games and predict their future sales based on those characteristics. We'll try to make a prediction for a new video game.
+
+The file `proposed_new_product.csv` has details about a hypothetical video game. We'll use our NN to predict how much money this product will make. The data has already been pre-scaled to the 0 - 1 range for convenience. Fire up `predict.py`:
+
+We've loaded the proposed new product's csv file using pandas like before and stored it in the variable X.
+
+```python
+# Load the data we make to use to make a prediction
+X = pd.read_csv("proposed_new_product.csv").values
+```
+
+Now let's make a prediction for this data. We just have to call `model.predict` and pass in the data for the new product, which we just called X:
+
+```python
+# Make a prediction with the neural network
+prediction = model.predict(X)
+
+# Grab just the first element of the first prediction (since that's the only have one)
+prediction = prediction[0][0]
+```
+
+That will run the input data through the trained NN and give us a prediction. One caveat: Keras always assumes that we are going to ask for multiple predictionis with multiple output values in each prediction. So it always returns predictions as a 2D array. Since we only care about the first value for the first prediction, let's grab the element `[0][0]`. We also need to re-scale the value back to the original units.
+
+```python
+# Re-scale the data from the 0-to-1 range back to dollars
+# These constants are from when the data was originally scaled down to the 0-to-1 range
+prediction = prediction + 0.1159
+prediction = prediction / 0.0000036968
+
+print("Earnings Prediction for Proposed Product - ${}".format(prediction))
+```
+
+Running this will now train the NN and give us a prediction:
+```
+The mean squared error (MSE) for the test data set is: 0.00018425464106258004
+Earnings Prediction for Proposed Product - $267156.02688499406
+```
+
+There is some randomness involved in training the NN, so we'll get slightly different values every time, but they should all be relatively close.
+
+### **Saving and loading models**
+
+So far, we've always retrained the NN every time we've used it. Large NNs can take hours or even days to train it. Instead of retraining each time, we can train it once, and save the result to a file. Then, whenever we want to use the NN, we can just load it back up and use it. Fire up `save_trained_model.py`.
+
+To save the model, we just call `model.save`:
+
+```python
+# Save the model to disk
+model.save("trained_model.h5")
+print("Model saved to disk.")
+```
+
+When a model is saved, it saves both the structure of the NN and the trained weights that determine how it works. The h5 file name extension is because the data will be stored in the hdf5 format.
+
+hdf5 is a binary file format designed for storing Python array data. The convention is to use `h5` as the file name extension but it's not required. Now we can run this code and it will train and save our model to disk.
+
+Open up `load_saved_model.py`:
+```python
+from keras.models import load_model
+
+model = load_model("trained_model.h5")
+```
+
+Since the file contains the structure and the training parameters, this single line recreates our entire trained NN. We can use the loaded model exactly like any other model. Now we do the same thing like last time:
+
+```python
+import pandas as pd
+from keras.models import load_model
+
+model = load_model("trained_model.h5")
+
+# Load er up!
+X = pd.read_csv("proposed_new_product.csv").values
+prediction = model.predict(X)
+
+# Grab just the first element of the first prediction (since we only have one)
+prediction = prediction[0][0]
+
+# Re-scale the data from the 0-to-1 range back to dollars
+# These constants are from when the data was originally scaled down to the 0-to-1 range
+prediction = prediction + 0.1159
+prediction = prediction / 0.0000036968
+
+print("Earnings Prediction for Proposed Product - ${}".format(prediction))
+```
+
+Now, we can easily use this trained NN from inside any program we write with just this minimal amount of code.
+
+## 5 - Pre-Trained Models in Keras

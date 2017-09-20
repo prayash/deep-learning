@@ -15,7 +15,7 @@ Y = training_data_df[['total_earnings']].values
 # Define the model
 model = Sequential()
 
-# 9 characteristics for each dataset, so 9 input dimensions!
+# 9 characteristics for each data set, so 9 input dimensions!
 # Rectified Linear Unit Activation Function will let us model more complex
 # and non-linear functions
 model.add(Dense(50, input_dim=9, activation='relu'))
