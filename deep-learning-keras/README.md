@@ -351,3 +351,107 @@ print("Earnings Prediction for Proposed Product - ${}".format(prediction))
 Now, we can easily use this trained NN from inside any program we write with just this minimal amount of code.
 
 ## 5 - Pre-Trained Models in Keras
+
+### **Pre-trained models**
+
+We don't always have to build our own models. We can use models built by other developers as well. Keras provides several popular image recognition models that we can use in our own projects. The image recognition models included with Keras, are all trained to recognize images from the [Imagenet data set](http://www.image-net.org/). The Imagenet data set is a collection of millions of pictures of objects that have been labeled, so we can use them to train computers to recognize those objects.
+
+Included image recognition models:
+- VGG (Visual Geometry Group at the University of Oxford)
+- ResNet50 (Microsoft Research)
+- Inception-v3 (Google)
+- Xception (François Chollet, author of Keras)
+
+We can reuse these models directly in our own programs to recognize images. Even if we want to recognize custom images, it's much faster to start with a pre-trained model, and fine tune it to our needs, instead of training our own model from scratch.
+
+Some of these models, like Inception-v3, are so complex that it's not even possible to train them from scratch on a single computer. These models illustrate the progression of the state of the art in image recognition. It's very useful to be familiar with these common NN designs, since they are so often reused, or adapted to solve real world problems.
+
+### **Recognize Images with the ResNet50 Model**
+
+We'll use the ResNet50 deep neural network model included with Keras to recognize objects and images. Let's open up `image_recognition.py`.
+
+We need to import all the necessary packages:
+
+```python
+import numpy as np
+from keras.preprocessing import image
+from keras.applications import resnet50
+```
+
+Then, let's create an instance of the ResNet50 model:
+
+```python
+# Load Keras' ResNet50 model that was pre-trained against the ImageNet database
+model = resnet50.ResNet50()
+```
+
+Then, we need to load the image file. Notice that the picture is too big for our NN, so we need to resize it. The size of the image being fed into the NN needs to match the number of input nodes in the NN. For ResNet50, that's 224 x 224.
+
+```python
+# Load the image file, resizing it to 224x224 pixels (required by this model)
+img = image.load_img("bay.jpg", target_size=(224, 224))
+```
+
+Using low-res images is common in image recognition models. It helps speed up the processing. We now need to convert the image data into an array of plain numbers that we can feed into the NN. Let's use the built in method `image.img_to_array`:
+
+```python
+# Convert the image to a numpy array
+x = image.img_to_array(img)
+```
+
+This will turn the image into a 3D array. The first two dimensions are height and width of the image, and the third dimension is color. Each pixel is made up of an RGB value. Our array will be three layers deep, with each layer representing the intensity of R, G, and B values. The NN expects us to pass in an array and multiple images at once. But right now we only have a single image to process. We can fix this by adding a 4th dimension to our array. Basically, ew just need to turn this single image into an array of multiple images, with just one element.
+
+```python
+# Add a forth dimension since Keras expects a list of images
+x = np.expand_dims(x, axis=0)
+```
+
+We also need to scale this data to 0 - 1 instead of 0 - 255:
+
+```python
+# Scale the input image to the range used in the trained network
+x = resnet50.preprocess_input(x)
+```
+
+Now, we are ready to run the normalized data through the NN and make a prediction:
+```python
+# Run the image through the deep neural network to make a prediction
+predictions = model.predict(x)
+```
+
+This will return a `predictions` object. The `predictions` object is a 1,000 element array of floating point numbers. Each element tells us how likely our picture contains each of 1,000 objects the model is trained to recognize. To make things easier, the ResNet50 model provides a `decode_predictions` function that will just tell us the names of the most likely matches, instead of making us check all 1,000 possible entries.
+
+```python
+# Look up the names of the predicted classes. Index zero is the results for the first image.
+predicted_classes = resnet50.decode_predictions(predictions, top=9)
+```
+
+Then, we can loop through the predictions and print out each result.
+```python
+print("This is an image of:")
+
+for imagenet_id, name, likelihood in predicted_classes[0]:
+    print(" - {}: {:2f} likelihood".format(name, likelihood))
+```
+
+The first time we execute this code, Keras will download the latest version of the ResNet50 model (~100MB of data). The results are:
+```
+Downloading data from https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json
+ 8192/35363 [=====>........................] - ETA: 0s
+40960/35363 [==================================] - 0s 
+This is an image of:
+ - seashore: 0.764099 likelihood
+ - lakeside: 0.145685 likelihood
+ - dock: 0.038846 likelihood
+ - breakwater: 0.023576 likelihood
+ - promontory: 0.010379 likelihood
+ - sandbar: 0.004848 likelihood
+ - catamaran: 0.004603 likelihood
+ - cliff: 0.000712 likelihood
+ - trimaran: 0.000559 likelihood
+```
+
+Good exercise is to try it on our own images!
+
+## 6 - Monitoring a Keras model with TensorBoard
+### **Export Keras logs in TensorFlow format**
