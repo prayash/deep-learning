@@ -455,3 +455,101 @@ Good exercise is to try it on our own images!
 
 ## 6 - Monitoring a Keras model with TensorBoard
 ### **Export Keras logs in TensorFlow format**
+
+TensorFlow comes with a great web-based tool that lets us visualize our model's structure and monitor its training. To use TensorBoard we need our Keras model to write log files in the format that TensorBoard can read. It'll use these log files to generate its visualizations. Fire up `model_logging.py`.
+
+By default Keras doesn't generate any TensorFlow log files, so we need to add a few lines of code. After defining the model, we can create our logger. By default Keras will only log details of the training process but it won't log the structure of the model. Logging the structure of the model can be really helpful if you want to visualize what's going on inside your neural network. We can tell Keras that we also want to log the structure of the model by setting `write_graph` to `True`. We can also write out some extra statistics on how each layer of our NN is working by passing in the `histogram_freq` parameter.
+
+We can give each layer in our model a name and then that name will show up in the TensorBoard visualizations. We can add a `name` parameter to each of our model layers and TensorBoard will display them.
+
+```python
+import pandas as pd
+import keras
+from keras.models import Sequential
+from keras.layers import *
+
+training_data_df = pd.read_csv("sales_data_training_scaled.csv")
+
+X = training_data_df.drop('total_earnings', axis=1).values
+Y = training_data_df[['total_earnings']].values
+
+# Define the model
+model = Sequential()
+model.add(Dense(50, input_dim=9, activation='relu', name='layer_1'))
+model.add(Dense(100, activation='relu', name='layer_2'))
+model.add(Dense(50, activation='relu', name='layer_3'))
+model.add(Dense(1, activation='linear', name='output_layer'))
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+# Create a TensorBoard logger
+logger = keras.callbacks.TensorBoard(
+    log_dir='logs',
+    write_graph=True
+)
+```
+
+Let's log out the stats every 5 passes. Now we just need to tell our model to use the logger during training. We can add a new parameter called `callback`. It's a list of functions we want Keras to call each time it makes a pass through the training data during the training process. We'll just add our `logger` object to that array.
+
+```python
+# Train the model
+model.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+    callbacks=[logger]
+)
+
+# Load the separate test data set
+test_data_df = pd.read_csv("sales_data_test_scaled.csv")
+
+X_test = test_data_df.drop('total_earnings', axis=1).values
+Y_test = test_data_df[['total_earnings']].values
+
+test_error_rate = model.evaluate(X_test, Y_test, verbose=0)
+print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
+```
+
+Our model is now capturing data in the format the TensorBoard can understand and visualize.
+
+### **Visualize the computational graph**
+
+It'a always helpful to visualize what's happening with the data. That's what TensorBoard helps us do. Run the `model_logging.py` file if you haven't already and it should spit out another directory with the log inside it.
+
+To run TensorBoard, we'll fire up a terminal on the project directory (`deep-learning-keras`). We'll run:
+```bash
+$ python3.6 -m tensorflow.tensorboard --logdir=06/logs
+```
+
+Now, hit up http://0.0.0.0:6006.
+
+To see our model's computational graph, click on the Graphs tab at the top. This is a visual representation of the TensorFlow computational graph that Keras built for us. We will now see a visual representation of the TensorFlow computational graph that Keras built for us.
+
+![Computational Graph](img/graph.png)
+
+Our input is underneath  the node `layer_1`. It's connected to `layer_1`, `layer_2`, `layer_3`, and finally the `output_later`. Notice that layers 1, 2, and 3 are the same color. That means that these boxes have the same internal structure. So, at a glance, we can tell that all three layers perform the same kinds of operations. The `output_layer` is a different color because it uses a different activation function than the other layers.
+
+Let's zoom in on the connections between the layers:
+
+![Tensor](img/tensor.png)
+
+Each line represents a tensor, or array of data being passed between the layers. The numbers here represent the size of the tensor or an array. We can see that the initial inputs of this NN are nine values that get passed to the first layer. But notice the dimensions are '? x 9' The `?` is the batch size. That just means that TensorFlow can process batches of data at once. It's a question mark because you can change the batch size depending on how much data you want to process at once.
+
+We can also expand the node to see what's going on inside of it. Let's click on `layer_1` and expand it. Click on the '+' sign to expand it:
+
+![Layer 1](img/layer_1.png)
+
+This view shows us the calculations being down inside `layer_1` of our NN. We can see the input values feed in here and then their matrix multiplied by the weights. Then, the bias of values are added in. Then the ReLU activation is applied and the results sent to the next layer.
+
+Since we're using Keras, it has set up all these operations and connections for us. All we had to do was ask it to add an additional layer to our NN. But if we were using TensorFlow directly, we have to define each of these operations and connections ourselves. Let's collapse this node and zoom out.
+
+A neat feature in TensorBoard is the ability to trace the path of the data through the graph. Let's say that we want to see what is required to generate an output from the NN. Let's look again at the nodes on the left, then we'll click on the output layer. Now, click 'Trace inputs' on the sidebar. This highlights the path data flows through to generate a prediction from the NN. If you're building a complex model and things aren't working correctly, it can be helpful to trace the path of data through the model to debug what's going on. Let's zoom back out.
+
+![Graph Overview](img/graph_overview.png)
+
+There is a LOT going on here beyond just the NN itself. Keras tends to build more complex TensorFlow models than what we would have build ourselves using TensorFlow directly.
+
+Since these models are auto-generated by Keras, they aren't always as clear to read as what we would have generated by hand. That can sometimes make it a little difficult to understand what's going on. But there's also an advantage. Keras tries to build models that capture best practices that we might not even know about. For example, all the green nodes here perform an operation called gradient clipping. Gradient clipping can help prevent issues when you're training very deep NNs. It's particularly useful for handling exploding or vanishing gradients. Keras always includes gradient clipping in our model by default.
+
+### **Visualize training progress**
