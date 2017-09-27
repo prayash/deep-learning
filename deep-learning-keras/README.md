@@ -1,3 +1,28 @@
+
+> For each chapter, there is a folder corresponding to the chapter number (if applicable).
+
+## Contents
+
+* [1 - Keras Overview](#1---keras-overview)
+* [2 - Setting Up](#2---setting-up)
+* [3 - Creating a Neural Network in Keras](#3---creating-a-neural-network-in-keras)
+    * [The train-test-evaluation flow](#the-train-test-evaluation-flow)
+    * [Keras Sequential API](#keras-sequential-api)
+    * [Pre-processing training data](#pre-processing-training-data)
+    * [Define a Keras model using the Sequential API](#define-a-keras-model-using-the-sequential-api)
+* [4 - Training Models](#4---training-models)
+    * [Training and evaluating the model](#training-and-evaluating-the-model)
+    * [Saving and loading models](#saving-and-loading-models)
+* [5 - Pre-Trained Models in Keras](#5---pre-trained-models-in-keras)
+    * [Pre-trained models](#pre-trained-models)
+    * [Recognize Images with the ResNet50 Model](#recognize-images-with-the-resnet50-model)
+* [6 - Monitoring a Keras model with TensorBoard](#6---monitoring-a-keras-model-with-tensorboard)
+    * [Export Keras logs in TensorFlow format](#export-keras-logs-in-tensorflow-format)
+    * [Visualize the computational graph](#visualize-the-computational-graph)
+    * [Visualize training progress](#visualize-training-progress)
+* [7 - Using a Trained Keras Model in Google Cloud](#7---using-a-trained-keras-model-in-google-cloud)
+    * [Exporting Google Cloud-compatible models](#exporting-google-cloud-compatible-models)
+
 ## 1 - Keras Overview
 
 Keras is quickly becoming one of the most popular programming frameworks for deep learning, because it's quick and easy to use. With Keras, we can build state-of-the-art machine learning models with just a few lines of code.
@@ -600,3 +625,109 @@ This chart shows the current cost of the NN as it was trained. The Y axis is the
 Right now, there are two lines on the chart. Each line represents a separate training run. If we look at the bototm left, we can see the legend and toggle each training run off/on separately. Let's compare the training results for these two runs. We can see that run 1 improved faster than run 2, but in the end, the results were similar for both. Using these graphs is a great way to try out different NN designs and find the design that works best for the problem we need to solve.
 
 These graphs update automatically every minute as the NN trains so we can kick off additional training runs and watch the progress live in the chart.
+
+## 7 - Using a Trained Keras Model in Google Cloud
+
+### **Exporting Google Cloud-compatible models**
+
+Once we've built and tuned our machine learning model using Keras, we can scale it up in production to serve lots of users. Since we're using Keras with TensorFlow backend, we can export our Keras model as a TensorFlow model and once we have a TensorFlow model, we can upload that to Google Cloud ML service. Using the Google Cloud ML service, we can support as many users as we need. Let's open up `export_model.py`.
+
+We've already defined the NN and we're running the training process by calling the fit function. To export this model as a TensorFlow model, we have to use some TensorFlow specific code:
+
+```python
+import pandas as pd
+import keras
+from keras.models import Sequential
+from keras.layers import *
+import tensorflow as tf
+
+training_data_df = pd.read_csv("sales_data_training_scaled.csv")
+
+X = training_data_df.drop('total_earnings', axis=1).values
+Y = training_data_df[['total_earnings']].values
+
+# Define the model
+model = Sequential()
+model.add(Dense(50, input_dim=9, activation='relu', name='layer_1'))
+model.add(Dense(100, activation='relu', name='layer_2'))
+model.add(Dense(50, activation='relu', name='layer_3'))
+model.add(Dense(1, activation='linear', name='output_layer'))
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+# Create a TensorBoard logger
+logger = keras.callbacks.TensorBoard(
+    log_dir='logs',
+    histogram_freq=5,
+    write_graph=True
+)
+
+# Train the model
+model.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+    callbacks=[logger]
+)
+
+# Load the separate test data set
+test_data_df = pd.read_csv("sales_data_test_scaled.csv")
+
+X_test = test_data_df.drop('total_earnings', axis=1).values
+Y_test = test_data_df[['total_earnings']].values
+
+test_error_rate = model.evaluate(X_test, Y_test, verbose=0)
+print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
+
+# We need to create this object to save a TensorFlow of custom options
+# The parameter is the name of the folder to save the model in
+model_builder = tf.saved_model.builder.SavedModelBuilder("exported_model")
+
+# We need to declare the inputs and outputs of our model, Keras makes this easy
+# by keeping track of specific inputs and outputs, so we use model.input or 
+# model.output accordingly
+inputs = {
+    'input': tf.saved_model.utils.build_tensor_info(model.input)
+}
+
+outputs = {
+    'earnings': tf.saved_model.utils.build_tensor_info(model.output)
+}
+
+# A signature_def is like a function declaration... TF looks for this to know 
+# how to run the prediction function of our model
+# This code will be the same every time!
+signature_def = tf.saved_model.signature_def_utils.build_signature_def(
+    inputs=inputs,
+    outputs=outputs,
+    method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME
+)
+
+# This tells TF we want to save both the structure of our model and the current
+# weights of the model
+model_builder.add_meta_graph_and_variables(
+    K.get_session(), # pass current session
+    tags=[tf.saved_model.tag_constants.SERVING], # assign special tag to make sure TF knows this model is meant for serving users
+    signature_def_map={ # pass signature_def defined above
+        tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
+    }
+)
+
+model_builder.save()
+```
+
+Let's give it a burn and run it!
+
+We should have a `exported_model/` folder now. The `saved_model.pb` file is the file that contains the structure of our model in Google's protobuff format. There's also a `variable/` directory now that contains a checkpoint of the train weights from our NN. This model is now ready to be uploaded to the Google Cloud.
+
+### **Configuring a new Google Cloud account**
+
+We need to set up a Google Cloud account. We also need the Google Cloud SDK. The Google Cloud SDK contains utilities that we can use to interact with Google Cloud services from our computer. Let's hit up http://console.cloud.google.com. We'll create a new project and let it start-up. We'll use the project ID in our program.
+
+Since Google Cloud has so man features, not all of them are enabled by default. We need to enable the Google Cloud Machine Learning service before we can use it. Let's go to API Manager > Library. It'll give us a list of all the services we can enable. We want Google Cloud Machine Learning > Machine Learning Engine API. Then, click to enable it. We'll then download the Google Cloud SDK at https://cloud.google.com/sdk/downloads#interactive. Once we install, we can run:
+```
+$ gcloud init
+```
+
+### **Uploading a Keras model to Google Cloud**
