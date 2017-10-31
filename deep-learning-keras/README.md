@@ -725,9 +725,22 @@ We should have a `exported_model/` folder now. The `saved_model.pb` file is the 
 
 We need to set up a Google Cloud account. We also need the Google Cloud SDK. The Google Cloud SDK contains utilities that we can use to interact with Google Cloud services from our computer. Let's hit up http://console.cloud.google.com. We'll create a new project and let it start-up. We'll use the project ID in our program.
 
-Since Google Cloud has so man features, not all of them are enabled by default. We need to enable the Google Cloud Machine Learning service before we can use it. Let's go to API Manager > Library. It'll give us a list of all the services we can enable. We want Google Cloud Machine Learning > Machine Learning Engine API. Then, click to enable it. We'll then download the Google Cloud SDK at https://cloud.google.com/sdk/downloads#interactive. Once we install, we can run:
+Since Google Cloud has so many features, not all of them are enabled by default. We need to enable the Google Cloud Machine Learning service before we can use it. Let's go to API Manager > Library. It'll give us a list of all the services we can enable. We want Google Cloud Machine Learning > Machine Learning Engine API. Then, click to enable it. We'll then download the Google Cloud SDK at https://cloud.google.com/sdk/downloads#interactive. Once we install, we can run:
 ```
 $ gcloud init
 ```
 
 ### **Uploading a Keras model to Google Cloud**
+
+The advantage of uploading our model to Google Cloud is that it is accessible from anywhere in the world. It's a great solution for using a model in production if server costs are a concern.
+
+Let's make sure we have an exported model ready to upload by running Export Model Final in PyCharm. We should also make sure that we have a properly configured Google Cloud account with access to the Google Cloud ML service and the gcloud command line tool is installed.
+
+We'll fire up the command line and navigate to the folder where the model is exported in the `exported model` directory.
+
+We'll upload our model by running:
+```
+$ gsutil mb -l us-central1 gs://keras-class-pt1000
+```
+
+`gsutil` is a utility that handles lots of basic Google service operations like creating new service buckets, moving files around, changing permissions and so on. `mb` stands for 'make bucket'. We'll also declare a data center. Then, we have to name the storage bucket to something globally unique.
